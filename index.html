@@ -1,0 +1,803 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PAES · Práctica</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Space+Mono:wght@400;700&display=swap');
+
+:root {
+  --navy: #080f1e;
+  --deep: #0c1a30;
+  --cyan: #5bbfd4;
+  --cyan2: #3a9eb8;
+  --cyan-light: #9dd8e8;
+  --card-glass: rgba(12,26,48,0.82);
+  --border: rgba(91,191,212,0.22);
+  --white-card: #eef5f9;
+  --text-dark: #0c1e30;
+  --correct: #27ae60;
+  --wrong: #e74c3c;
+  --font: 'Outfit', sans-serif;
+  --mono: 'Space Mono', monospace;
+}
+
+*{margin:0;padding:0;box-sizing:border-box;}
+html,body{height:100%;width:100%;overflow:hidden;font-family:var(--font);background:var(--navy);color:#e8f4f8;}
+
+#starCanvas{position:fixed;inset:0;z-index:0;pointer-events:none;}
+
+/* ── SCREENS ── */
+.screen{position:fixed;inset:0;z-index:10;display:flex;align-items:center;justify-content:center;
+  opacity:0;pointer-events:none;transition:opacity .55s cubic-bezier(.4,0,.2,1);}
+.screen.active{opacity:1;pointer-events:all;}
+
+/* ── LOGIN ── */
+#loginScreen{flex-direction:column;}
+.login-wrap{
+  background:var(--card-glass);border:1px solid var(--border);border-radius:24px;
+  padding:56px 64px 48px;text-align:center;backdrop-filter:blur(22px);
+  box-shadow:0 0 80px rgba(91,191,212,.1),0 24px 60px rgba(0,0,0,.5);
+  max-width:440px;width:90%;animation:float 7s ease-in-out infinite;
+}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}
+.login-eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:4px;color:var(--cyan);opacity:.65;text-transform:uppercase;margin-bottom:10px;}
+.login-h1{font-size:52px;font-weight:800;color:#fff;line-height:1;margin-bottom:4px;letter-spacing:-2px;}
+.login-tagline{font-size:13px;color:var(--cyan-light);opacity:.55;letter-spacing:2px;margin-bottom:40px;}
+.login-input{
+  width:100%;padding:15px 22px;background:rgba(255,255,255,.05);
+  border:1.5px solid var(--border);border-radius:14px;color:#fff;
+  font-family:var(--mono);font-size:22px;text-align:center;letter-spacing:8px;
+  outline:none;transition:border-color .3s,box-shadow .3s;margin-bottom:18px;
+}
+.login-input:focus{border-color:var(--cyan);box-shadow:0 0 24px rgba(91,191,212,.22);}
+.login-input::placeholder{font-size:13px;letter-spacing:2px;opacity:.3;}
+.btn-enter{
+  width:100%;padding:15px;background:linear-gradient(135deg,var(--cyan),var(--cyan2));
+  border:none;border-radius:14px;color:#fff;font-family:var(--font);font-size:14px;
+  font-weight:700;letter-spacing:3px;text-transform:uppercase;cursor:pointer;
+  transition:transform .2s,box-shadow .2s;
+}
+.btn-enter:hover{transform:translateY(-3px);box-shadow:0 10px 28px rgba(91,191,212,.35);}
+.login-err{color:#ff7080;font-size:13px;margin-top:14px;min-height:18px;font-weight:500;}
+
+/* ── MENÚ ── */
+#menuScreen{flex-direction:column;overflow-y:auto;padding:30px 20px;justify-content:flex-start;padding-top:60px;}
+.menu-head{text-align:center;margin-bottom:44px;}
+.menu-head h1{font-size:34px;font-weight:700;color:#fff;letter-spacing:-.5px;}
+.menu-head p{font-size:13px;color:var(--cyan-light);opacity:.55;margin-top:6px;letter-spacing:1px;}
+.cards-row{display:flex;flex-wrap:wrap;gap:18px;justify-content:center;max-width:1080px;}
+.s-card{
+  background:var(--card-glass);border:1px solid var(--border);border-radius:20px;
+  padding:30px 22px 22px;width:186px;text-align:center;cursor:pointer;
+  backdrop-filter:blur(16px);transition:transform .25s,box-shadow .25s,border-color .25s;
+}
+.s-card:hover{transform:translateY(-7px);box-shadow:0 20px 44px rgba(91,191,212,.18);border-color:var(--cyan);}
+.s-icon{font-size:38px;margin-bottom:12px;display:block;}
+.s-label{font-size:24px;font-weight:800;color:#fff;margin-bottom:3px;}
+.s-name{font-size:11px;color:var(--cyan-light);opacity:.55;margin-bottom:18px;letter-spacing:.5px;}
+.btn-cont{
+  background:none;border:none;color:var(--cyan);font-size:12px;font-weight:600;
+  cursor:pointer;font-family:var(--font);letter-spacing:.5px;
+  display:flex;align-items:center;gap:5px;margin:0 auto;transition:color .2s;padding:3px 0;
+}
+.btn-cont:hover{color:var(--cyan-light);}
+.cont-list{display:none;margin-top:12px;text-align:left;border-top:1px solid rgba(91,191,212,.12);padding-top:10px;}
+.cont-list.open{display:block;}
+.cont-list li{list-style:none;font-size:10.5px;color:var(--cyan-light);opacity:.7;padding:3px 0 3px 12px;position:relative;line-height:1.4;}
+.cont-list li::before{content:'·';position:absolute;left:2px;color:var(--cyan);}
+
+/* ── SUBJECT ── */
+#subjectScreen{flex-direction:column;gap:28px;}
+.sub-head{text-align:center;}
+.sub-head h2{font-size:56px;font-weight:800;color:#fff;letter-spacing:-2px;}
+.sub-head p{font-size:13px;color:var(--cyan-light);opacity:.55;margin-top:6px;}
+.btn-gen{
+  padding:18px 56px;background:linear-gradient(135deg,var(--cyan),var(--cyan2));
+  border:none;border-radius:18px;color:#fff;font-family:var(--font);font-size:16px;
+  font-weight:800;letter-spacing:2.5px;text-transform:uppercase;cursor:pointer;
+  box-shadow:0 6px 28px rgba(91,191,212,.3);transition:transform .2s,box-shadow .2s;
+}
+.btn-gen:hover{transform:translateY(-4px);box-shadow:0 14px 40px rgba(91,191,212,.42);}
+.btn-gen:disabled{opacity:.45;cursor:not-allowed;transform:none;}
+.load-msg{font-size:13px;color:var(--cyan-light);opacity:.65;text-align:center;min-height:20px;}
+
+/* ── LOADING ── */
+.loading-screen{
+  position:fixed;inset:0;z-index:500;display:none;
+  flex-direction:column;align-items:center;justify-content:center;
+  background:rgba(8,15,30,.92);backdrop-filter:blur(10px);
+}
+.loading-screen.show{display:flex;}
+.loading-orb{
+  width:90px;height:90px;border-radius:50%;margin-bottom:32px;
+  background:radial-gradient(circle at 35% 35%, var(--cyan-light), var(--cyan), var(--cyan2));
+  animation:pulse-orb 2s ease-in-out infinite;
+  box-shadow:0 0 40px rgba(91,191,212,.5),0 0 80px rgba(91,191,212,.2);
+}
+@keyframes pulse-orb{0%,100%{transform:scale(1)}50%{transform:scale(1.12)}}
+.loading-title{font-size:20px;font-weight:700;color:#fff;margin-bottom:10px;}
+.loading-sub{font-size:13px;color:var(--cyan-light);opacity:.6;text-align:center;max-width:300px;line-height:1.6;}
+.loading-dots{display:flex;gap:8px;margin-top:24px;}
+.loading-dots span{width:8px;height:8px;border-radius:50%;background:var(--cyan);animation:dot 1.4s infinite;}
+.loading-dots span:nth-child(2){animation-delay:.2s;}
+.loading-dots span:nth-child(3){animation-delay:.4s;}
+@keyframes dot{0%,80%,100%{transform:scale(0.5);opacity:.4}40%{transform:scale(1);opacity:1}}
+
+/* ── BACK ── */
+#btnBack{
+  position:fixed;top:18px;left:18px;z-index:200;
+  background:var(--card-glass);border:1px solid var(--border);
+  color:var(--cyan-light);padding:8px 20px;border-radius:30px;
+  font-size:13px;font-weight:600;cursor:pointer;font-family:var(--font);
+  backdrop-filter:blur(14px);transition:background .2s,box-shadow .2s;display:none;
+}
+#btnBack.on{display:block;}
+#btnBack:hover{background:rgba(91,191,212,.12);box-shadow:0 0 18px rgba(91,191,212,.2);}
+
+/* ── LUPA (botón chat) ── */
+#btnLupa{
+  position:fixed;top:18px;right:18px;z-index:200;
+  width:42px;height:42px;border-radius:50%;
+  background:var(--card-glass);border:1px solid var(--border);
+  color:var(--cyan-light);cursor:pointer;
+  display:none;align-items:center;justify-content:center;
+  backdrop-filter:blur(14px);transition:background .2s,box-shadow .2s,transform .2s;
+}
+#btnLupa.on{display:flex;}
+#btnLupa:hover{background:rgba(91,191,212,.18);box-shadow:0 0 18px rgba(91,191,212,.3);transform:scale(1.08);}
+#btnLupa svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round;}
+
+/* ── CHAT PANEL ── */
+#chatPanel{
+  position:fixed;top:0;right:0;bottom:0;z-index:400;
+  width:380px;max-width:95vw;
+  background:rgba(8,18,36,0.97);border-left:1px solid var(--border);
+  backdrop-filter:blur(24px);
+  display:flex;flex-direction:column;
+  transform:translateX(100%);transition:transform .35s cubic-bezier(.4,0,.2,1);
+  box-shadow:-8px 0 40px rgba(0,0,0,.5);
+}
+#chatPanel.open{transform:translateX(0);}
+
+.chat-header{
+  padding:20px 20px 16px;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;gap:12px;
+}
+.chat-header-icon{
+  width:36px;height:36px;border-radius:50%;flex-shrink:0;
+  background:linear-gradient(135deg,var(--cyan),var(--cyan2));
+  display:flex;align-items:center;justify-content:center;font-size:16px;
+}
+.chat-header-text{flex:1;}
+.chat-header-text h3{font-size:14px;font-weight:700;color:#fff;margin-bottom:2px;}
+.chat-header-text p{font-size:11px;color:var(--cyan-light);opacity:.6;}
+.chat-close{
+  background:none;border:none;color:var(--cyan-light);cursor:pointer;
+  opacity:.5;font-size:20px;padding:4px;line-height:1;transition:opacity .2s;
+}
+.chat-close:hover{opacity:1;}
+
+.chat-messages{
+  flex:1;overflow-y:auto;padding:16px;
+  display:flex;flex-direction:column;gap:12px;
+  scrollbar-width:thin;scrollbar-color:rgba(91,191,212,.2) transparent;
+}
+.chat-messages::-webkit-scrollbar{width:4px;}
+.chat-messages::-webkit-scrollbar-thumb{background:rgba(91,191,212,.2);border-radius:4px;}
+
+.msg{max-width:88%;padding:10px 14px;border-radius:14px;font-size:13.5px;line-height:1.6;}
+.msg-user{
+  align-self:flex-end;
+  background:linear-gradient(135deg,var(--cyan),var(--cyan2));
+  color:#fff;border-bottom-right-radius:4px;
+}
+.msg-bot{
+  align-self:flex-start;
+  background:rgba(255,255,255,.06);border:1px solid var(--border);
+  color:#d8eef5;border-bottom-left-radius:4px;
+}
+.msg-bot strong{color:var(--cyan-light);}
+.msg-typing{
+  align-self:flex-start;
+  background:rgba(255,255,255,.06);border:1px solid var(--border);
+  padding:12px 16px;border-radius:14px;border-bottom-left-radius:4px;
+}
+.typing-dots{display:flex;gap:5px;align-items:center;}
+.typing-dots span{width:6px;height:6px;border-radius:50%;background:var(--cyan);animation:dot 1.4s infinite;}
+.typing-dots span:nth-child(2){animation-delay:.2s;}
+.typing-dots span:nth-child(3){animation-delay:.4s;}
+
+.chat-input-row{
+  padding:14px 16px;border-top:1px solid var(--border);
+  display:flex;gap:10px;align-items:flex-end;
+}
+.chat-textarea{
+  flex:1;background:rgba(255,255,255,.05);border:1.5px solid var(--border);
+  border-radius:12px;padding:10px 14px;color:#fff;font-family:var(--font);
+  font-size:13.5px;resize:none;outline:none;max-height:100px;min-height:42px;
+  line-height:1.5;transition:border-color .2s;
+  scrollbar-width:none;
+}
+.chat-textarea::-webkit-scrollbar{display:none;}
+.chat-textarea:focus{border-color:var(--cyan);}
+.chat-textarea::placeholder{color:rgba(255,255,255,.25);}
+.chat-send{
+  width:38px;height:38px;border-radius:10px;flex-shrink:0;
+  background:linear-gradient(135deg,var(--cyan),var(--cyan2));
+  border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;
+  transition:transform .2s,box-shadow .2s;
+}
+.chat-send:hover{transform:scale(1.08);box-shadow:0 4px 16px rgba(91,191,212,.4);}
+.chat-send:disabled{opacity:.4;cursor:not-allowed;transform:none;}
+.chat-send svg{width:16px;height:16px;fill:none;stroke:#fff;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round;}
+
+/* ── PROG ── */
+#prog{position:fixed;top:0;left:0;height:3px;background:linear-gradient(90deg,var(--cyan),var(--cyan-light));z-index:300;transition:width .3s ease;}
+
+/* ── Q SCREEN ── */
+#qScreen{position:fixed;inset:0;z-index:10;display:none;flex-direction:column;}
+#qScreen.active{display:flex;}
+.q-container{height:100vh;overflow-y:scroll;scroll-snap-type:y mandatory;scrollbar-width:none;}
+.q-container::-webkit-scrollbar{display:none;}
+.q-page{height:100vh;scroll-snap-align:start;display:flex;align-items:center;justify-content:center;padding:70px 20px 20px;}
+.q-card{
+  background:var(--white-card);border-radius:24px;padding:42px 52px;
+  max-width:800px;width:100%;box-shadow:0 24px 70px rgba(0,0,0,.4);
+  color:var(--text-dark);max-height:88vh;overflow-y:auto;scrollbar-width:thin;
+}
+.q-meta{display:flex;align-items:center;gap:10px;margin-bottom:18px;flex-wrap:wrap;}
+.q-num{font-family:var(--mono);font-size:11px;color:var(--cyan2);font-weight:700;letter-spacing:2px;text-transform:uppercase;}
+.q-topic{font-size:11px;color:#7aabb8;background:#e4f1f6;padding:3px 10px;border-radius:20px;}
+.diff-badge{font-size:10px;padding:3px 10px;border-radius:20px;font-weight:700;}
+.d-easy{background:#d5f5e3;color:#1a6b3a;}
+.d-medium{background:#fef3d0;color:#7a4f00;}
+.d-hard{background:#fde0df;color:#7a1a1a;}
+.q-text{font-size:17px;line-height:1.7;color:var(--text-dark);margin-bottom:28px;}
+.opts{list-style:none;display:flex;flex-direction:column;gap:10px;}
+.opt{
+  display:flex;align-items:flex-start;gap:14px;padding:14px 18px;border-radius:13px;
+  border:1.5px solid #cde2ea;background:#fff;cursor:pointer;transition:border-color .2s,background .2s;
+}
+.opt:hover{border-color:var(--cyan);background:#f0f9fc;}
+.opt.sel{border-color:var(--cyan);background:#e3f5fa;}
+.opt.cor{border-color:var(--correct);background:#e6f9ee;}
+.opt.wrg{border-color:var(--wrong);background:#fdf0f0;}
+.opt input[type=radio]{display:none;}
+.opt-ltr{font-family:var(--mono);font-size:13px;font-weight:700;color:var(--cyan2);min-width:20px;margin-top:1px;}
+.opt-txt{font-size:15px;line-height:1.55;color:#1a2e40;}
+.reveal{display:none;margin-top:22px;padding:16px 20px;background:#e8f6ee;border-radius:13px;border-left:4px solid var(--correct);}
+.reveal.show{display:block;}
+.reveal p{font-size:13.5px;color:#1a4428;line-height:1.65;}
+.reveal strong{color:#0e6632;}
+
+/* ── RESULTS ── */
+.res-page{height:100vh;scroll-snap-align:start;display:flex;align-items:center;justify-content:center;padding:70px 20px 20px;}
+.res-card{
+  background:var(--card-glass);border:1px solid var(--border);border-radius:24px;
+  padding:52px 48px;max-width:520px;width:100%;text-align:center;
+  backdrop-filter:blur(20px);box-shadow:0 24px 64px rgba(0,0,0,.45);
+}
+.res-title{font-size:26px;font-weight:700;color:#fff;margin-bottom:8px;}
+.res-pct{font-size:78px;font-weight:800;font-family:var(--mono);color:var(--cyan);line-height:1;margin:22px 0;}
+.res-row{display:flex;gap:28px;justify-content:center;margin-bottom:34px;}
+.res-stat .n{font-size:34px;font-weight:800;font-family:var(--mono);}
+.res-stat .l{font-size:11px;opacity:.55;letter-spacing:1.5px;text-transform:uppercase;margin-top:3px;}
+.c-col{color:var(--correct);}
+.w-col{color:var(--wrong);}
+.n-col{color:#8abccc;}
+.btn-reveal{
+  width:100%;padding:14px;margin-bottom:12px;
+  background:linear-gradient(135deg,var(--cyan),var(--cyan2));
+  border:none;border-radius:13px;color:#fff;font-family:var(--font);
+  font-size:14px;font-weight:700;letter-spacing:2px;text-transform:uppercase;
+  cursor:pointer;transition:transform .2s,box-shadow .2s;
+}
+.btn-reveal:hover{transform:translateY(-2px);box-shadow:0 8px 26px rgba(91,191,212,.35);}
+.btn-new{
+  width:100%;padding:13px;background:transparent;border:1.5px solid var(--border);
+  border-radius:13px;color:var(--cyan-light);font-family:var(--font);
+  font-size:14px;font-weight:600;cursor:pointer;transition:border-color .2s,background .2s;
+}
+.btn-new:hover{border-color:var(--cyan);background:rgba(91,191,212,.08);}
+
+/* ── SCROLL HINT ── */
+#scrollHint{
+  position:fixed;bottom:22px;left:50%;transform:translateX(-50%);
+  z-index:50;display:flex;flex-direction:column;align-items:center;gap:4px;
+  opacity:.45;animation:bounce 2.2s infinite;pointer-events:none;
+}
+#scrollHint span{font-size:10px;letter-spacing:2px;text-transform:uppercase;color:var(--cyan-light);}
+@keyframes bounce{0%,100%{transform:translateX(-50%) translateY(0)}50%{transform:translateX(-50%) translateY(7px)}}
+
+@media(max-width:600px){
+  .login-wrap{padding:40px 28px;}
+  .login-h1{font-size:42px;}
+  .q-card{padding:24px 18px;}
+  .s-card{width:145px;padding:22px 14px 18px;}
+  .cards-row{gap:12px;}
+  #chatPanel{width:100vw;}
+}
+</style>
+</head>
+<body>
+<canvas id="starCanvas"></canvas>
+<div id="prog" style="width:0%"></div>
+<button id="btnBack" onclick="goBack()">← Menú</button>
+
+<!-- Botón lupa -->
+<button id="btnLupa" onclick="toggleChat()" title="Consultar dudas">
+  <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><line x1="16.5" y1="16.5" x2="22" y2="22"/></svg>
+</button>
+
+<div id="scrollHint" style="display:none">
+  <span>Scroll para avanzar</span>
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 5v14M5 12l7 7 7-7"/></svg>
+</div>
+
+<!-- LOADING -->
+<div class="loading-screen" id="loadingScreen">
+  <div class="loading-orb"></div>
+  <div class="loading-title">Generando preguntas</div>
+  <div class="loading-sub" id="loadingSubText">Preparando 20 preguntas para ti...</div>
+  <div class="loading-dots"><span></span><span></span><span></span></div>
+</div>
+
+<!-- LOGIN -->
+<div class="screen active" id="loginScreen">
+  <div class="login-wrap">
+    <div class="login-eyebrow">Plataforma de Estudio</div>
+    <h1 class="login-h1">PAES</h1>
+    <p class="login-tagline">Práctica · Preparación · Rendimiento</p>
+    <input class="login-input" type="password" id="clave" placeholder="Clave de acceso" maxlength="12"
+      onkeydown="if(event.key==='Enter')doLogin()">
+    <button class="btn-enter" onclick="doLogin()">Ingresar</button>
+    <div class="login-err" id="loginErr"></div>
+  </div>
+</div>
+
+<!-- MENÚ -->
+<div class="screen" id="menuScreen">
+  <div style="display:flex;flex-direction:column;align-items:center;width:100%;max-height:100vh;overflow-y:auto;padding:50px 20px 40px;">
+    <div class="menu-head">
+      <h1>¿Qué vas a practicar hoy?</h1>
+      <p>Selecciona una prueba PAES para comenzar</p>
+    </div>
+    <div class="cards-row" id="cardsRow"></div>
+  </div>
+</div>
+
+<!-- SUBJECT -->
+<div class="screen" id="subjectScreen">
+  <div class="sub-head">
+    <h2 id="subTitle">M1</h2>
+    <p id="subDesc">Matemática 1</p>
+  </div>
+  <button class="btn-gen" id="btnGen" onclick="startSet()">⚡ Generar 20 preguntas</button>
+  <div class="load-msg" id="loadMsg"></div>
+</div>
+
+<!-- PREGUNTAS -->
+<div id="qScreen">
+  <div class="q-container" id="qContainer"></div>
+</div>
+
+<!-- CHAT PANEL -->
+<div id="chatPanel">
+  <div class="chat-header">
+    <div class="chat-header-icon">💬</div>
+    <div class="chat-header-text">
+      <h3>Consulta de dudas</h3>
+      <p id="chatSubjectLabel">Materia activa</p>
+    </div>
+    <button class="chat-close" onclick="toggleChat()">×</button>
+  </div>
+  <div class="chat-messages" id="chatMessages">
+    <div class="msg msg-bot" id="chatWelcome">
+      ¡Hola! Puedes preguntarme cualquier cosa sobre la materia. ¿En qué te puedo ayudar?
+    </div>
+  </div>
+  <div class="chat-input-row">
+    <textarea class="chat-textarea" id="chatInput" placeholder="Escribe tu pregunta..." rows="1"
+      onkeydown="handleChatKey(event)" oninput="autoResize(this)"></textarea>
+    <button class="chat-send" id="chatSendBtn" onclick="sendChat()">
+      <svg viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+    </button>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════════
+//  MATERIAS
+// ══════════════════════════════════════════════
+const SUBJECTS = [
+  {id:"m1",label:"M1",name:"Matemática 1",icon:"📐",desc:"Números, Álgebra y Geometría",
+   contenidos:["Números enteros, racionales y reales","Potencias y raíces","Razones y proporciones","Porcentajes","Expresiones algebraicas","Ecuaciones de 1° y 2° grado","Sistemas de ecuaciones","Funciones y representaciones","Función lineal y cuadrática","Geometría plana","Teorema de Pitágoras","Semejanza y congruencia","Probabilidad básica","Estadística descriptiva"]},
+  {id:"m2",label:"M2",name:"Matemática 2",icon:"∫",desc:"Álgebra avanzada y Cálculo",
+   contenidos:["Funciones y transformaciones","Función exponencial y logarítmica","Trigonometría y razones","Identidades trigonométricas","Números complejos","Sucesiones y series","Límites y continuidad","Derivadas","Aplicaciones de la derivada","Integrales","Cónicas","Geometría analítica","Combinatoria","Estadística inferencial"]},
+  {id:"fisica",label:"Física",name:"Física",icon:"⚛️",desc:"Mecánica, Ondas y Electromagnetismo",
+   contenidos:["Cinemática: MRU y MRUA","Dinámica: Leyes de Newton","Trabajo y energía","Gravitación universal","Movimiento circular","Fluidos","Temperatura y calor","Termodinámica","Ondas mecánicas y sonido","Óptica geométrica","Electricidad","Circuitos eléctricos","Magnetismo","Inducción electromagnética"]},
+  {id:"quimica",label:"Química",name:"Química",icon:"🧪",desc:"Materia, Enlace y Reacciones",
+   contenidos:["Estructura del átomo","Tabla periódica","Enlace iónico y covalente","Nomenclatura","Tipos de reacciones","Estequiometría","Soluciones y concentración","Ácidos y bases (pH)","Electroquímica","Química orgánica","Gases ideales","Equilibrio químico","Cinética química","Termodinámica química"]},
+  {id:"biologia",label:"Biología",name:"Biología",icon:"🧬",desc:"Célula, Genética y Evolución",
+   contenidos:["Célula procarionte y eucarionte","Organelos y funciones","Mitosis y meiosis","Metabolismo celular","Fotosíntesis y respiración","Genética mendeliana","ADN y síntesis proteica","Mutaciones","Evolución y selección natural","Taxonomía","Sistemas del cuerpo humano","Sistema nervioso e inmune","Ecología","Ciclos biogeoquímicos"]}
+];
+
+const SUBJECT_PROMPTS = {
+  m1:"Matemática 1 PAES Chile: números enteros, racionales y reales, potencias, raíces, razones, proporciones, porcentajes, álgebra, ecuaciones de 1° y 2° grado, sistemas de ecuaciones, funciones lineales y cuadráticas, geometría plana, Pitágoras, semejanza, probabilidad básica, estadística descriptiva.",
+  m2:"Matemática 2 PAES Chile: funciones y transformaciones, función exponencial y logarítmica, trigonometría, identidades trigonométricas, números complejos, sucesiones y series, límites, derivadas, integrales, cónicas, geometría analítica, combinatoria, estadística inferencial.",
+  fisica:"Física PAES Chile: cinemática MRU y MRUA, leyes de Newton, trabajo y energía, gravitación, movimiento circular, fluidos, calor, termodinámica, ondas y sonido, óptica, electricidad, circuitos, magnetismo, inducción electromagnética.",
+  quimica:"Química PAES Chile: estructura atómica, tabla periódica, enlace iónico y covalente, nomenclatura, tipos de reacciones, estequiometría, soluciones, pH, electroquímica, química orgánica, gases ideales, equilibrio, cinética.",
+  biologia:"Biología PAES Chile: célula, organelos, mitosis y meiosis, metabolismo, fotosíntesis, respiración, genética mendeliana, ADN, síntesis proteica, mutaciones, evolución, selección natural, sistemas del cuerpo humano, ecología, ciclos biogeoquímicos."
+};
+
+// ══════════════════════════════════════════════
+//  ESTADO
+// ══════════════════════════════════════════════
+let curSubject=null, questions=[], userAnswers={}, resultsCalcd=false;
+let chatHistory=[], chatOpen=false;
+
+// ══════════════════════════════════════════════
+//  CANVAS ESTRELLAS
+// ══════════════════════════════════════════════
+(function(){
+  const c=document.getElementById('starCanvas'),ctx=c.getContext('2d');
+  let W,H,stars=[],nebulas=[];
+  function resize(){W=c.width=innerWidth;H=c.height=innerHeight;build();}
+  function rnd(a,b){return a+Math.random()*(b-a);}
+  function build(){
+    stars=[];nebulas=[];
+    for(let i=0;i<300;i++) stars.push({x:rnd(0,W),y:rnd(0,H),r:rnd(.25,1.8),a:rnd(.3,1),sp:rnd(.0004,.003),ph:rnd(0,Math.PI*2),col:Math.random()<.12?'#9dd8e8':Math.random()<.08?'#d4edf5':'#fff'});
+    const nc=['rgba(20,55,110,','rgba(15,70,100,','rgba(8,45,85,','rgba(35,65,130,'];
+    for(let i=0;i<6;i++) nebulas.push({x:rnd(0,W),y:rnd(0,H),r:rnd(180,420),col:nc[Math.floor(Math.random()*nc.length)],a:rnd(.05,.12)});
+  }
+  function draw(t){
+    const g=ctx.createLinearGradient(0,0,W*.4,H);
+    g.addColorStop(0,'#080f1e');g.addColorStop(.55,'#0c1e38');g.addColorStop(1,'#07152a');
+    ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
+    nebulas.forEach(n=>{const g2=ctx.createRadialGradient(n.x,n.y,0,n.x,n.y,n.r);g2.addColorStop(0,n.col+n.a+')');g2.addColorStop(1,n.col+'0)');ctx.fillStyle=g2;ctx.beginPath();ctx.arc(n.x,n.y,n.r,0,Math.PI*2);ctx.fill();});
+    stars.forEach(s=>{const f=.5+.5*Math.sin(t*s.sp*1000+s.ph);ctx.globalAlpha=s.a*(.45+.55*f);ctx.fillStyle=s.col;ctx.beginPath();ctx.arc(s.x,s.y,s.r,0,Math.PI*2);ctx.fill();});
+    ctx.globalAlpha=1;
+  }
+  function loop(t){draw(t*.001);requestAnimationFrame(loop);}
+  addEventListener('resize',resize);resize();requestAnimationFrame(loop);
+})();
+
+// ══════════════════════════════════════════════
+//  LOGIN
+// ══════════════════════════════════════════════
+function doLogin(){
+  const v=document.getElementById('clave').value.trim();
+  const e=document.getElementById('loginErr');
+  if(v==='19851015'){e.textContent='';showScreen('menuScreen');renderMenu();}
+  else{
+    e.textContent='✕  Clave incorrecta, intenta nuevamente.';
+    const inp=document.getElementById('clave');
+    inp.value='';inp.style.borderColor='#ff7080';
+    setTimeout(()=>inp.style.borderColor='',1600);
+    inp.focus();
+  }
+}
+document.getElementById('clave').focus();
+
+// ══════════════════════════════════════════════
+//  PANTALLAS
+// ══════════════════════════════════════════════
+function showScreen(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  const qs=document.getElementById('qScreen');
+  qs.classList.remove('active');qs.style.display='none';
+  document.getElementById('scrollHint').style.display='none';
+  const back=document.getElementById('btnBack');
+  const lupa=document.getElementById('btnLupa');
+  back.classList.remove('on');lupa.classList.remove('on');
+  // Cerrar chat si cambia de pantalla
+  document.getElementById('chatPanel').classList.remove('open');
+  chatOpen=false;
+  if(id==='qScreen'){
+    qs.style.display='flex';qs.classList.add('active');
+    back.classList.add('on');lupa.classList.add('on');
+    document.getElementById('scrollHint').style.display='flex';
+  } else {
+    const el=document.getElementById(id);if(el)el.classList.add('active');
+    if(id!=='loginScreen')back.classList.add('on');
+    if(id==='menuScreen')back.classList.remove('on');
+  }
+  document.getElementById('prog').style.width='0%';
+}
+
+function goBack(){
+  if(document.getElementById('qScreen').classList.contains('active')) showScreen('subjectScreen');
+  else showScreen('menuScreen');
+}
+
+// ══════════════════════════════════════════════
+//  MENÚ
+// ══════════════════════════════════════════════
+function renderMenu(){
+  const row=document.getElementById('cardsRow');row.innerHTML='';
+  SUBJECTS.forEach(s=>{
+    const card=document.createElement('div');card.className='s-card';
+    card.innerHTML=`<span class="s-icon">${s.icon}</span><div class="s-label">${s.label}</div><div class="s-name">${s.name}</div>
+    <button class="btn-cont" onclick="toggleCont(event,'${s.id}')"><span id="ctxt-${s.id}">contenidos ›</span></button>
+    <ul class="cont-list" id="clist-${s.id}">${s.contenidos.map(c=>`<li>${c}</li>`).join('')}</ul>`;
+    card.addEventListener('click',e=>{if(e.target.closest('.btn-cont'))return;openSubject(s.id);});
+    row.appendChild(card);
+  });
+}
+function toggleCont(e,id){
+  e.stopPropagation();
+  const l=document.getElementById('clist-'+id),t=document.getElementById('ctxt-'+id);
+  const o=l.classList.toggle('open');t.textContent=o?'contenidos ∨':'contenidos ›';
+}
+
+// ══════════════════════════════════════════════
+//  SUBJECT
+// ══════════════════════════════════════════════
+function openSubject(id){
+  curSubject=SUBJECTS.find(s=>s.id===id);
+  document.getElementById('subTitle').textContent=curSubject.label;
+  document.getElementById('subDesc').textContent=curSubject.name+' — '+curSubject.desc;
+  document.getElementById('loadMsg').textContent='';
+  document.getElementById('btnGen').disabled=false;
+  // Reset chat para nueva materia
+  chatHistory=[];
+  document.getElementById('chatMessages').innerHTML=
+    `<div class="msg msg-bot">¡Hola! Puedes preguntarme cualquier cosa sobre <strong>${curSubject.name}</strong>. ¿En qué te puedo ayudar?</div>`;
+  document.getElementById('chatSubjectLabel').textContent=curSubject.name;
+  showScreen('subjectScreen');
+}
+
+// ══════════════════════════════════════════════
+//  LLAMADA AL BACKEND
+// ══════════════════════════════════════════════
+async function callAPI(payload) {
+  const res = await fetch('/.netlify/functions/ask', {
+    method: 'POST',
+    headers: {'Content-Type':'application/json'},
+    body: JSON.stringify(payload)
+  });
+  if (!res.ok) {
+    const txt = await res.text();
+    throw new Error(`Error ${res.status}: ${txt}`);
+  }
+  return res.json();
+}
+
+// ══════════════════════════════════════════════
+//  GENERAR PREGUNTAS
+// ══════════════════════════════════════════════
+async function startSet(){
+  document.getElementById('btnGen').disabled=true;
+  document.getElementById('loadMsg').textContent='';
+  const ls=document.getElementById('loadingScreen');
+  ls.classList.add('show');
+  document.getElementById('loadingSubText').textContent=`Preparando 20 preguntas de ${curSubject.name}...`;
+
+  try {
+    const prompt=`Eres un experto en la PAES (Prueba de Acceso a la Educación Superior) de Chile.
+Genera exactamente 20 preguntas de opción múltiple de ${curSubject.name} para práctica PAES.
+
+Área: ${SUBJECT_PROMPTS[curSubject.id]}
+Contenidos: ${curSubject.contenidos.join(', ')}
+
+REGLAS:
+- Cada pregunta cubre un tema distinto
+- Distribuye dificultad: 5 fáciles (easy), 10 medias (medium), 5 difíciles (hard)
+- Las 4 opciones deben ser plausibles, solo UNA correcta
+- Explicación clara y paso a paso si aplica
+- Preguntas ORIGINALES y variadas
+
+Responde ÚNICAMENTE con JSON válido, sin texto ni backticks extra:
+{"questions":[{"difficulty":"easy","topic":"tema","question":"enunciado","options":{"A":"...","B":"...","C":"...","D":"..."},"answer":"A","explanation":"..."}]}`;
+
+    const data = await callAPI({
+      max_tokens: 8000,
+      messages: [{role:"user", content: prompt}]
+    });
+
+    const raw = data.content.map(b=>b.text||'').join('');
+    const clean = raw.replace(/```json\s*/gi,'').replace(/```\s*/g,'').trim();
+    let parsed;
+    try { parsed=JSON.parse(clean); }
+    catch {
+      const m=clean.match(/\{[\s\S]*\}/);
+      if(m) parsed=JSON.parse(m[0]);
+      else throw new Error('No se pudo parsear respuesta');
+    }
+    if(!parsed.questions||parsed.questions.length<10) throw new Error('Respuesta incompleta');
+
+    questions=parsed.questions.slice(0,20);
+    userAnswers={};resultsCalcd=false;
+    renderQuestions();
+    ls.classList.remove('show');
+    showScreen('qScreen');
+  } catch(err){
+    ls.classList.remove('show');
+    document.getElementById('btnGen').disabled=false;
+    document.getElementById('loadMsg').textContent='⚠️ Error al generar preguntas. Verifica tu conexión e intenta nuevamente.';
+    console.error(err);
+  }
+}
+
+// ══════════════════════════════════════════════
+//  RENDER PREGUNTAS
+// ══════════════════════════════════════════════
+function renderQuestions(){
+  const cont=document.getElementById('qContainer');cont.innerHTML='';
+  const diffMap={easy:'Fácil',medium:'Media',hard:'Difícil'};
+  const diffCls={easy:'d-easy',medium:'d-medium',hard:'d-hard'};
+
+  questions.forEach((q,i)=>{
+    const page=document.createElement('div');page.className='q-page';page.id='qp-'+i;
+    page.innerHTML=`<div class="q-card">
+      <div class="q-meta">
+        <span class="q-num">Pregunta ${i+1} / ${questions.length}</span>
+        <span class="diff-badge ${diffCls[q.difficulty]||'d-medium'}">${diffMap[q.difficulty]||'Media'}</span>
+        <span class="q-topic">${q.topic||''}</span>
+      </div>
+      <p class="q-text">${q.question}</p>
+      <ul class="opts" id="opts-${i}">
+        ${['A','B','C','D'].map(lt=>`
+          <li class="opt" id="opt-${i}-${lt}" onclick="pick(${i},'${lt}')">
+            <input type="radio" name="q${i}" value="${lt}">
+            <span class="opt-ltr">${lt}</span>
+            <span class="opt-txt">${q.options[lt]||''}</span>
+          </li>`).join('')}
+      </ul>
+      <div class="reveal" id="rev-${i}">
+        <p><strong>✓ Respuesta correcta: ${q.answer}</strong></p>
+        <p style="margin-top:9px;">${q.explanation}</p>
+      </div>
+    </div>`;
+    cont.appendChild(page);
+  });
+
+  const rp=document.createElement('div');rp.className='res-page';rp.id='resPage';
+  rp.innerHTML=`<div class="res-card">
+    <div class="res-title">🎓 Resultados</div>
+    <div class="res-pct" id="resPct">—</div>
+    <div class="res-row">
+      <div class="res-stat"><div class="n c-col" id="resOk">0</div><div class="l">Correctas</div></div>
+      <div class="res-stat"><div class="n w-col" id="resWrong">0</div><div class="l">Incorrectas</div></div>
+      <div class="res-stat"><div class="n n-col" id="resBlank">0</div><div class="l">Sin resp.</div></div>
+    </div>
+    <button class="btn-reveal" onclick="revealAll()">Mostrar respuestas</button>
+    <button class="btn-new" onclick="startSet()">↩ Nuevo set</button>
+  </div>`;
+  cont.appendChild(rp);
+  cont.addEventListener('scroll',onScroll);
+}
+
+function onScroll(){
+  const c=document.getElementById('qContainer');
+  const total=c.scrollHeight-c.clientHeight;
+  if(total>0) document.getElementById('prog').style.width=(c.scrollTop/total*100)+'%';
+  const rp=document.getElementById('resPage');
+  if(rp&&!resultsCalcd){
+    const rect=rp.getBoundingClientRect();
+    if(rect.top<innerHeight*.6){calcResults();resultsCalcd=true;}
+  }
+}
+
+function pick(qi,lt){
+  userAnswers[qi]=lt;
+  document.querySelectorAll(`#opts-${qi} .opt`).forEach(el=>el.classList.remove('sel'));
+  const el=document.getElementById(`opt-${qi}-${lt}`);
+  el.classList.add('sel');el.querySelector('input').checked=true;
+}
+
+function calcResults(){
+  let ok=0,wrong=0,blank=0;
+  questions.forEach((q,i)=>{
+    const a=userAnswers[i];
+    if(!a)blank++;else if(a===q.answer)ok++;else wrong++;
+  });
+  document.getElementById('resPct').textContent=Math.round(ok/questions.length*100)+'%';
+  document.getElementById('resOk').textContent=ok;
+  document.getElementById('resWrong').textContent=wrong;
+  document.getElementById('resBlank').textContent=blank;
+}
+
+function revealAll(){
+  questions.forEach((q,i)=>{
+    document.getElementById('rev-'+i).classList.add('show');
+    ['A','B','C','D'].forEach(lt=>{
+      const el=document.getElementById(`opt-${i}-${lt}`);
+      if(!el)return;
+      el.style.pointerEvents='none';
+      if(lt===q.answer)el.classList.add('cor');
+      else if(userAnswers[i]===lt)el.classList.add('wrg');
+    });
+  });
+  document.getElementById('qContainer').scrollTo({top:0,behavior:'smooth'});
+}
+
+// ══════════════════════════════════════════════
+//  CHAT
+// ══════════════════════════════════════════════
+function toggleChat(){
+  chatOpen=!chatOpen;
+  document.getElementById('chatPanel').classList.toggle('open',chatOpen);
+  if(chatOpen) setTimeout(()=>document.getElementById('chatInput').focus(),350);
+}
+
+function autoResize(el){
+  el.style.height='auto';
+  el.style.height=Math.min(el.scrollHeight,100)+'px';
+}
+
+function handleChatKey(e){
+  if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendChat();}
+}
+
+function appendMsg(role, text){
+  const msgs=document.getElementById('chatMessages');
+  const div=document.createElement('div');
+  div.className='msg '+(role==='user'?'msg-user':'msg-bot');
+  div.innerHTML=text.replace(/\n/g,'<br>').replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>');
+  msgs.appendChild(div);
+  msgs.scrollTop=msgs.scrollHeight;
+  return div;
+}
+
+function showTyping(){
+  const msgs=document.getElementById('chatMessages');
+  const div=document.createElement('div');
+  div.className='msg-typing';div.id='typingIndicator';
+  div.innerHTML='<div class="typing-dots"><span></span><span></span><span></span></div>';
+  msgs.appendChild(div);
+  msgs.scrollTop=msgs.scrollHeight;
+}
+
+function removeTyping(){
+  const t=document.getElementById('typingIndicator');
+  if(t)t.remove();
+}
+
+async function sendChat(){
+  const inp=document.getElementById('chatInput');
+  const text=inp.value.trim();
+  if(!text)return;
+
+  inp.value='';inp.style.height='auto';
+  document.getElementById('chatSendBtn').disabled=true;
+
+  appendMsg('user',text);
+  chatHistory.push({role:'user',content:text});
+
+  showTyping();
+
+  const systemPrompt=`Eres un tutor experto en ${curSubject?curSubject.name:'PAES Chile'}. 
+Ayudas a estudiantes chilenos a prepararse para la PAES.
+${curSubject?`Área: ${SUBJECT_PROMPTS[curSubject.id]}`:''}
+Responde de forma clara, didáctica y paso a paso cuando sea necesario.
+Usa ejemplos concretos. Si hay fórmulas, explícalas bien.
+Responde siempre en español. Sé conciso pero completo.`;
+
+  try {
+    const data = await callAPI({
+      max_tokens: 1000,
+      system: systemPrompt,
+      messages: chatHistory
+    });
+
+    const reply = data.content.map(b=>b.text||'').join('').trim();
+    removeTyping();
+    appendMsg('bot', reply);
+    chatHistory.push({role:'assistant',content:reply});
+    // Mantener historial razonable
+    if(chatHistory.length>20) chatHistory=chatHistory.slice(-20);
+  } catch(err){
+    removeTyping();
+    appendMsg('bot','Lo siento, hubo un error. Intenta nuevamente.');
+    console.error(err);
+  }
+
+  document.getElementById('chatSendBtn').disabled=false;
+  document.getElementById('chatInput').focus();
+}
+</script>
+</body>
+</html>
